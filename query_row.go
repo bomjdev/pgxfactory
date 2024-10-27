@@ -7,9 +7,13 @@ import (
 
 type QueryRowFn func(ctx context.Context, exec Executor, args ...any) pgx.Row
 
+func QueryRow(ctx context.Context, sql string, exec Executor, args ...any) pgx.Row {
+	return exec.QueryRow(ctx, sql, args...)
+}
+
 func NewQueryRow(sql string) QueryRowFn {
 	return func(ctx context.Context, exec Executor, args ...any) pgx.Row {
-		return exec.QueryRow(ctx, sql, args...)
+		return QueryRow(ctx, sql, exec, args...)
 	}
 }
 
