@@ -6,14 +6,14 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func Exec(ctx context.Context, sql string, exec Executor, args ...any) (pgconn.CommandTag, error) {
+func Exec(ctx context.Context, sql string, exec DB, args ...any) (pgconn.CommandTag, error) {
 	return exec.Exec(ctx, sql, args...)
 }
 
-type ExecFn func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error)
+type ExecFn func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error)
 
 func NewExec(sql string) ExecFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+	return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 		return Exec(ctx, sql, exec, args...)
 	}
 }
@@ -27,7 +27,7 @@ func (fn ExecFn) WithMiddleware(middlewares ...func(ExecFn) ExecFn) ExecFn {
 }
 
 func IsSelect(fn ExecFn) ExecFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+	return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 		tag, err := fn(ctx, exec, args...)
 		if err != nil {
 			return tag, err
@@ -40,7 +40,7 @@ func IsSelect(fn ExecFn) ExecFn {
 }
 
 func IsInsert(fn ExecFn) ExecFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+	return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 		tag, err := fn(ctx, exec, args...)
 		if err != nil {
 			return tag, err
@@ -53,7 +53,7 @@ func IsInsert(fn ExecFn) ExecFn {
 }
 
 func IsUpdate(fn ExecFn) ExecFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+	return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 		tag, err := fn(ctx, exec, args...)
 		if err != nil {
 			return tag, err
@@ -66,7 +66,7 @@ func IsUpdate(fn ExecFn) ExecFn {
 }
 
 func IsDelete(fn ExecFn) ExecFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+	return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 		tag, err := fn(ctx, exec, args...)
 		if err != nil {
 			return tag, err
@@ -80,7 +80,7 @@ func IsDelete(fn ExecFn) ExecFn {
 
 func RowsAffected(n int64) func(ExecFn) ExecFn {
 	return func(fn ExecFn) ExecFn {
-		return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
+		return func(ctx context.Context, exec DB, args ...any) (pgconn.CommandTag, error) {
 			tag, err := fn(ctx, exec, args...)
 			if err != nil {
 				return tag, err

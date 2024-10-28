@@ -5,12 +5,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type Query[T any] func(ctx context.Context, exec Executor, args ...any) (T, error)
+type Query[T any] func(ctx context.Context, exec DB, args ...any) (T, error)
 
 type RowsCollector[T, R any] func(rows pgx.Rows, rowTo pgx.RowToFunc[T]) (R, error)
 
 func NewQuery[T, R any](getRows SQLRows, collect RowsCollector[T, R], rowTo pgx.RowToFunc[T]) Query[R] {
-	return func(ctx context.Context, exec Executor, args ...any) (R, error) {
+	return func(ctx context.Context, exec DB, args ...any) (R, error) {
 		var v R
 		rows, err := getRows(ctx, exec, args...)
 		if err != nil {
@@ -46,14 +46,14 @@ func NewQuerier[T any](queryFn SQLRows, rowTo pgx.RowToFunc[T]) Querier[T] {
 	}
 }
 
-func (s Querier[T]) All(ctx context.Context, exec Executor, args ...any) ([]T, error) {
+func (s Querier[T]) All(ctx context.Context, exec DB, args ...any) ([]T, error) {
 	return s.many(ctx, exec, args...)
 }
 
-func (s Querier[T]) First(ctx context.Context, exec Executor, args ...any) (T, error) {
+func (s Querier[T]) First(ctx context.Context, exec DB, args ...any) (T, error) {
 	return s.first(ctx, exec, args...)
 }
 
-func (s Querier[T]) One(ctx context.Context, exec Executor, args ...any) (T, error) {
+func (s Querier[T]) One(ctx context.Context, exec DB, args ...any) (T, error) {
 	return s.one(ctx, exec, args...)
 }
