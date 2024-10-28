@@ -18,13 +18,12 @@ func NewExec(sql string) ExecFn {
 	}
 }
 
-type Middleware[T any] func(T) T
-
-func (fn ExecFn) WithMiddleware(middlewares ...Middleware[ExecFn]) ExecFn {
+func (fn ExecFn) WithMiddleware(middlewares ...func(ExecFn) ExecFn) ExecFn {
+	ret := fn
 	for _, mw := range middlewares {
-		fn = mw(fn)
+		ret = mw(ret)
 	}
-	return fn
+	return ret
 }
 
 func IsSelect(fn ExecFn) ExecFn {
@@ -79,7 +78,7 @@ func IsDelete(fn ExecFn) ExecFn {
 	}
 }
 
-func RowsAffected(n int64) Middleware[ExecFn] {
+func RowsAffected(n int64) func(ExecFn) ExecFn {
 	return func(fn ExecFn) ExecFn {
 		return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
 			tag, err := fn(ctx, exec, args...)

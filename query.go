@@ -5,14 +5,55 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func Query(ctx context.Context, sql string, exec Executor, args ...any) (pgx.Rows, error) {
-	return exec.Query(ctx, sql, args...)
+type Query[T any] func(ctx context.Context, exec Executor, args ...any) (T, error)
+
+type RowsCollector[T, R any] func(rows pgx.Rows, rowTo pgx.RowToFunc[T]) (R, error)
+
+func NewQuery[T, R any](getRows SQLRows, collect RowsCollector[T, R], rowTo pgx.RowToFunc[T]) Query[R] {
+	return func(ctx context.Context, exec Executor, args ...any) (R, error) {
+		var v R
+		rows, err := getRows(ctx, exec, args...)
+		if err != nil {
+			return v, err
+		}
+		return collect(rows, rowTo)
+	}
 }
 
-type QueryFn func(ctx context.Context, exec Executor, args ...any) (pgx.Rows, error)
+func NewQueryAll[T any](getRows SQLRows, rowTo pgx.RowToFunc[T]) Query[[]T] {
+	return NewQuery(getRows, pgx.CollectRows[T], rowTo)
+}
 
-func NewQuery(sql string) QueryFn {
-	return func(ctx context.Context, exec Executor, args ...any) (pgx.Rows, error) {
-		return Query(ctx, sql, exec, args...)
+func NewQueryOne[T any](getRows SQLRows, rowTo pgx.RowToFunc[T]) Query[T] {
+	return NewQuery(getRows, pgx.CollectExactlyOneRow[T], rowTo)
+}
+
+func NewQueryFirst[T any](getRows SQLRows, rowTo pgx.RowToFunc[T]) Query[T] {
+	return NewQuery(getRows, pgx.CollectOneRow[T], rowTo)
+}
+
+type Querier[T any] struct {
+	many  Query[[]T]
+	first Query[T]
+	one   Query[T]
+}
+
+func NewQuerier[T any](queryFn SQLRows, rowTo pgx.RowToFunc[T]) Querier[T] {
+	return Querier[T]{
+		many:  NewQueryAll(queryFn, rowTo),
+		first: NewQueryFirst(queryFn, rowTo),
+		one:   NewQueryOne(queryFn, rowTo),
 	}
+}
+
+func (s Querier[T]) All(ctx context.Context, exec Executor, args ...any) ([]T, error) {
+	return s.many(ctx, exec, args...)
+}
+
+func (s Querier[T]) First(ctx context.Context, exec Executor, args ...any) (T, error) {
+	return s.first(ctx, exec, args...)
+}
+
+func (s Querier[T]) One(ctx context.Context, exec Executor, args ...any) (T, error) {
+	return s.one(ctx, exec, args...)
 }

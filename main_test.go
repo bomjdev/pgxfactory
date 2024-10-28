@@ -17,7 +17,6 @@ func TestMain(m *testing.M) {
 	p, err := pgxpool.New(ctx, "postgres://postgres:password@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 	defer p.Close()
 
