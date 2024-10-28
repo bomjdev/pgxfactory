@@ -6,13 +6,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type ExecFn func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error)
-
 func Exec(ctx context.Context, sql string, exec Executor, args ...any) (pgconn.CommandTag, error) {
 	return exec.Exec(ctx, sql, args...)
 }
 
-func NewExecFn(sql string) ExecFn {
+type ExecFn func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error)
+
+func NewExec(sql string) ExecFn {
 	return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
 		return Exec(ctx, sql, exec, args...)
 	}
@@ -21,11 +21,10 @@ func NewExecFn(sql string) ExecFn {
 type Middleware[T any] func(T) T
 
 func (fn ExecFn) WithMiddleware(middlewares ...Middleware[ExecFn]) ExecFn {
-	ret := fn
 	for _, mw := range middlewares {
-		ret = mw(ret)
+		fn = mw(fn)
 	}
-	return ret
+	return fn
 }
 
 func IsSelect(fn ExecFn) ExecFn {
@@ -80,7 +79,7 @@ func IsDelete(fn ExecFn) ExecFn {
 	}
 }
 
-func ExpectRowsAffected(n int64) Middleware[ExecFn] {
+func RowsAffected(n int64) Middleware[ExecFn] {
 	return func(fn ExecFn) ExecFn {
 		return func(ctx context.Context, exec Executor, args ...any) (pgconn.CommandTag, error) {
 			tag, err := fn(ctx, exec, args...)
