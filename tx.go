@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"log"
 )
 
 type Beginner interface {
@@ -33,10 +34,10 @@ func CommitOrRollback(ctx context.Context, tx pgx.Tx, cause error) {
 	if cause != nil {
 		err := tx.Rollback(ctx)
 		if err != nil {
-			fmt.Printf("rollback error: %s; rollback caused by: %s\n", err, cause)
+			_ = log.Output(3, fmt.Sprintf("rollback error: %s; rollback caused by: %s", err, cause))
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		fmt.Printf("commit error: %s\n", err)
+		_ = log.Output(3, fmt.Sprintf("commit error: %s", err))
 	}
 }
