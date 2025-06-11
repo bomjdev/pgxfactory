@@ -32,10 +32,10 @@ Usage: defer func() { CommitOrRollback(ctx, tx, err) }()
 */
 func CommitOrRollback(ctx context.Context, tx pgx.Tx, cause error) {
 	if cause != nil {
-		err := tx.Rollback(ctx)
-		if err != nil {
+		if err := tx.Rollback(ctx); err != nil {
 			_ = log.Output(3, fmt.Sprintf("rollback error: %s; rollback caused by: %s", err, cause))
 		}
+		return
 	}
 	if err := tx.Commit(ctx); err != nil {
 		_ = log.Output(3, fmt.Sprintf("commit error: %s", err))
